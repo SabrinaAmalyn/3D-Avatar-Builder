@@ -19,7 +19,7 @@
 | **Vite** | Build tool + dev server | Runs the app locally with instant reload (`npm run dev`) and bundles it for production |
 | **React** | UI library (came with the Vite React template) | Builds the interface out of components; Zustand plugs into it |
 | **ESLint** | Linter (came with the Vite template) | Flags mistakes in the code as I type. Chose ESLint over Oxlint because it matches tutorials, has more React plugins and help online, and speed doesn't matter at this project size |
-| **PocketBase** | Open-source backend in a single file (database + auth + file storage + API) | Saves and loads avatars, handles user accounts, stores uploaded assets |
+| **PocketBase** | Open-source backend in a single file (database + auth + file storage + API) | Saves and loads avatars, handles user accounts, stores uploaded assets. Runs locally at `http://127.0.0.1:8090` for now |
 
 **How they fit together:** UI controls (Tailwind) → update the store (Zustand) → the 3D scene (Three.js) reads the store and re-renders → Save/Load goes through PocketBase.
 
@@ -36,7 +36,8 @@
 | 4 | Cleaned out template styling & assets | ✅ Done | 11 Nov 2026 | `527f9c8` |
 | 5 | Made `3d-avatar-builder` the repo root | ✅ Done | 11 Nov 2026 | `922ba96` |
 | 6 | Installed Three.js, React Three Fiber & Drei | ✅ Done | 11 Nov 2026 | `94224c4` |
-| 7 | First 3D scene: a box with orbit controls | ✅ Done | 11 Nov 2026 | _(not committed yet)_ |
+| 7 | First 3D scene: a box with orbit controls | ✅ Done | 11 Nov 2026 | `df30803` |
+| 8 | Set up PocketBase locally (skipped paid hosting) | ✅ Done | 11 Nov 2026 | – (lives outside the repo) |
 
 <!-- Status key: ✅ Done · 🔄 In progress · ⏸️ Stuck · ⬜ Not started -->
 
@@ -326,7 +327,7 @@ _(none)_
 
 ### Step 7: First 3D scene: a box with orbit controls
 **Date:** 11 Nov 2026
-**Commit:** _(not committed yet)_
+**Commit:** `df30803` – "Step 7: first 3D scene (box + orbit controls)"
 
 **What I did**
 - Made `#root` fill the whole window so the 3D canvas has room to draw.
@@ -388,6 +389,63 @@ What each piece does:
 - `meshNormalMaterial` colours each surface by the direction it faces (its *normal*): facing x → reddish, facing y → greenish, facing z → bluish. That's why each side of the cube is a different colour. It's a debugging/demo material, handy for checking a shape is there and the right way round.
 - `ambientLight` = even light everywhere, no shadows or shading. `directionalLight` = sunlight from one direction, which gives faces different brightness so the shape reads as 3D.
 - The canvas fills its parent element, so the parent (`#root`) needs a real height, or the canvas will be 0px tall.
+
+---
+
+### Step 8: Set up PocketBase locally (skipped paid hosting)
+**Date:** 11 Nov 2026
+**Commit:** – (PocketBase lives outside the repo, so nothing to commit)
+
+**What I did**
+- **Decision:** the tutorial deploys PocketBase on **Elestio** (Docker Compose + PocketBase template → new VM → CI/CD pipeline). Elestio is only free for 3 days and then needs a card, so I skipped it and run PocketBase **on my laptop** instead.
+- Downloaded the Windows build of PocketBase from pocketbase.io and unzipped it.
+- Put `pocketbase.exe` in its own folder, **outside** the git repo:
+  ```
+  C:\3D Avatar Builder\
+  ├── 3d-avatar-builder\   ← git repo (React app)
+  └── pocketbase\          ← backend, NOT in git
+      ├── pocketbase.exe
+      └── pb_data\         ← created on first run: database + uploaded files
+  ```
+- Started it, created the **superuser** (admin) account, and logged in to the admin dashboard.
+
+**Why**
+- My earlier HTML/CSS sites were just **files**, so free static hosting could serve them. PocketBase is a **program that must keep running** (database, logins, save/load requests), so putting it online means renting a server that's on 24/7, which costs money.
+- For learning and building, running it locally gives every feature for free. The only difference is that it's reachable only from my own laptop.
+
+**Key commands / code**
+```
+cd "C:\3D Avatar Builder\pocketbase"
+.\pocketbase.exe serve
+```
+- Admin dashboard: http://127.0.0.1:8090/_/
+- API (what the React app will call): http://127.0.0.1:8090
+- PocketBase must be **running** (terminal left open) whenever I use the app. `Ctrl + C` stops it.
+- Day-to-day I'll need **two terminals**: one running `npm run dev` (React app, port 5173) and one running `pocketbase.exe serve` (backend, port 8090).
+
+**Problems & fixes**
+- **Problem:** the tutorial's hosting (Elestio) costs money after a 3-day trial. **Fix:** run PocketBase locally and look at hosting later.
+
+**Notes / things I learned: deployment terms explained**
+| Term | Simple meaning |
+|---|---|
+| **Elestio** | A company that rents out servers with open-source apps (like PocketBase) pre-installed. You pay so you don't have to set up the server yourself. |
+| **Docker** | Packs an app and everything it needs into a sealed "box" (a *container*) that runs the same on any computer. |
+| **Docker Compose** | A recipe file (`docker-compose.yml`) listing which containers to start and how they connect, e.g. "run PocketBase, keep its data in this folder, open port 8090". |
+| **Template** | A ready-made recipe. Choosing "PocketBase" means the Docker Compose file is already written. |
+| **VM (Virtual Machine)** | A rented computer in a data centre: a slice of a big server that acts like its own machine. |
+| **Cloud provider** | The company that owns the data centre (AWS, Google Cloud, Hetzner, DigitalOcean, ...). |
+| **Region** | Where in the world the server physically is. Closer to users = faster. |
+| **Service plan** | How powerful (and expensive) the rented computer is: CPU, RAM, storage. |
+| **CI/CD target instance** | The specific server the app gets delivered to ("target" = destination). |
+| **Project** | A folder in the hosting account for grouping related servers. |
+| **CI/CD pipeline** | Automatic delivery: on every `git push`, it builds and updates the live server. **CI** = Continuous Integration (build/test automatically), **CD** = Continuous Deployment (put it live automatically). |
+
+Other notes:
+- **Superuser** = PocketBase's admin account for the dashboard. It's separate from the normal *users* who will sign up in the avatar builder.
+- `pb_data/` **is** the database. Don't delete it, and back it up by copying the folder (with PocketBase stopped).
+- `127.0.0.1` = "this computer" (same as `localhost`). Nobody else can reach it.
+- **Later, to put it online:** managed PocketBase hosts (PocketBase Cloud, PocketHost) or a cheap VPS (~$5–10/month). Free tiers change often, so check current pricing first.
 
 ---
 
