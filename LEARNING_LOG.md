@@ -2,7 +2,7 @@
 
 **Tutorial:** _(link to be added)_
 **Started:** 11 Nov 2026
-**Project folder:** `C:\3D Avatar Builder`
+**Project folder (repo root):** `C:\3D Avatar Builder\3d-avatar-builder`
 **GitHub repo:** https://github.com/SabrinaAmalyn/3D-Avatar-Builder
 
 ---
@@ -32,6 +32,7 @@
 | 2 | Scaffolded project with Vite (React + npm) | ✅ Done | 11 Nov 2026 | `527f9c8` |
 | 3 | Installed Tailwind CSS as a Vite plugin | ✅ Done | 11 Nov 2026 | `527f9c8` |
 | 4 | Cleaned out template styling & assets | ✅ Done | 11 Nov 2026 | `527f9c8` |
+| 5 | Made `3d-avatar-builder` the repo root | ✅ Done | 11 Nov 2026 | `922ba96` |
 
 <!-- Status key: ✅ Done · 🔄 In progress · ⏸️ Stuck · ⬜ Not started -->
 
@@ -44,7 +45,7 @@
 **Commit:** `544c2c8` – "Step 0: learning log"
 
 **What I did**
-- Set up `C:\3D Avatar Builder` as the project folder for the 3D avatar builder.
+- Set up `C:\3D Avatar Builder` as the project folder for the 3D avatar builder (later moved down into `3d-avatar-builder\` in Step 5).
 - Added this `LEARNING_LOG.md` to track each tutorial step.
 
 **Why**
@@ -100,7 +101,7 @@ git push
 - `git add` → stage changes, `git commit` → save a snapshot locally, `git push` → upload to GitHub.
 - `-u origin main` on the first push sets the default, so later pushes need only `git push`.
 - Error 403 means "you're logged in, but this account isn't allowed here." It's a wrong-account problem, not a wrong-password problem.
-- `git add .` only adds changes in the **current folder and below**. Running it inside `3d-avatar-builder/` skipped `LEARNING_LOG.md` in the repo root. Use `git add -A` (adds everything in the repo from anywhere), or run `git add .` from the repo root.
+- `git add .` only adds changes in the **current folder and below**. Running it inside the old `3d-avatar-builder/` subfolder skipped `LEARNING_LOG.md` in the repo root. Use `git add -A` (adds everything in the repo from anywhere), or run `git add .` from the repo root. (Since Step 5 the app folder *is* the repo root, so this can't happen the same way.)
 - Use `git config user.email` to check which email commits are labelled with.
 
 ---
@@ -111,7 +112,7 @@ git push
 
 **What I did**
 - Created a new Vite project using npm, with the React (JavaScript) template.
-- The app lives in the subfolder `3d-avatar-builder/` inside the repo.
+- Vite created the app in a new subfolder, `3d-avatar-builder/` (in Step 5 I made this folder the repo root).
 - Installed dependencies with npm.
 
 **Why**
@@ -142,7 +143,7 @@ _(none)_
 **Notes / things I learned**
 - `npm run lint` runs ESLint over the project.
 - `node_modules/` is never committed; anyone can recreate it from `package.json` + `package-lock.json` with `npm install`.
-- Because the app is in a subfolder, run npm commands from `C:\3D Avatar Builder\3d-avatar-builder`, not the repo root.
+- Run npm commands from the folder that has `package.json`: `C:\3D Avatar Builder\3d-avatar-builder`.
 
 ---
 
@@ -232,6 +233,41 @@ Files left in `src/`: `main.jsx`, `App.jsx`, `index.css`.
 - `main.jsx` imports `index.css`, so Tailwind loads globally for every component.
 - `public/` (favicon.svg, icons.svg) is separate from `src/assets/`. Files in `public/` are served as-is at the site root (e.g. `/favicon.svg`), so the favicon still works.
 - Tailwind's base styles ("Preflight") reset default browser styling. That's why plain `<h1>` text looks unstyled unless I add classes like `text-3xl`.
+
+---
+
+### Step 5: Made `3d-avatar-builder` the repo root
+**Date:** 11 Nov 2026
+**Commit:** `922ba96` – "Make 3d-avatar-builder the repo root"
+
+**What I did**
+- Moved the hidden `.git` folder and `LEARNING_LOG.md` from `C:\3D Avatar Builder` down into `C:\3D Avatar Builder\3d-avatar-builder`.
+- Committed and pushed, so on GitHub `package.json`, `src/` etc. now sit at the top level of the repo instead of inside a `3d-avatar-builder/` folder.
+
+**Why**
+- Vite scaffolded the app into a subfolder, so the repo had an extra folder level. Having the app folder as the repo root is the standard layout: one folder for git, npm and VS Code, and hosting services (Vercel, Netlify, etc.) find `package.json` without extra config.
+
+**Key commands / code**
+```
+# stop dev server & close VS Code first
+cd "C:\3D Avatar Builder"
+Move-Item -Force .git 3d-avatar-builder\
+Move-Item LEARNING_LOG.md 3d-avatar-builder\
+cd 3d-avatar-builder
+git add -A
+git status        # files show as "renamed", not deleted + new
+git commit -m "Make 3d-avatar-builder the repo root"
+git push
+```
+
+**Problems & fixes**
+- This came out of Step 4's push problem: running `git add .` inside the subfolder had skipped the learning log in the parent folder. This change fixes the cause.
+
+**Notes / things I learned**
+- A folder is a git repo because it contains `.git`. Moving `.git` changes which folder is the repo root.
+- Git notices when files have been moved and records them as **renames**, so the history of every file is kept (`git log --follow <file>` shows it across the move).
+- `-Force` is needed in PowerShell because `.git` is a hidden folder.
+- From now on, open `C:\3D Avatar Builder\3d-avatar-builder` in VS Code and run all git + npm commands there.
 
 ---
 
