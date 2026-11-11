@@ -15,11 +15,11 @@
 | **React Three Fiber** (`@react-three/fiber`) | React renderer for Three.js | Lets me write the 3D scene as React components (`<Canvas>`, `<mesh>`, ...) instead of plain Three.js code |
 | **Drei** (`@react-three/drei`) | Helper library for React Three Fiber | Ready-made pieces: camera controls, model loading, lighting environments, etc. |
 | **Tailwind CSS** | Utility-first CSS framework | Styles the builder UI (panels, buttons, colour pickers, sliders) with classes directly in the markup |
-| **Zustand** | Small state-management library | Holds the avatar's current settings (body, hair, outfit, colours) in one store, so the UI and the 3D scene stay in sync |
+| **Zustand** | Small state-management library (v5) | Holds the avatar's current settings (body, hair, outfit, colours) in one store, so the UI and the 3D scene stay in sync |
 | **Vite** | Build tool + dev server | Runs the app locally with instant reload (`npm run dev`) and bundles it for production |
 | **React** | UI library (came with the Vite React template) | Builds the interface out of components; Zustand plugs into it |
 | **ESLint** | Linter (came with the Vite template) | Flags mistakes in the code as I type. Chose ESLint over Oxlint because it matches tutorials, has more React plugins and help online, and speed doesn't matter at this project size |
-| **PocketBase** | Open-source backend in a single file (database + auth + file storage + API) | Saves and loads avatars, handles user accounts, stores uploaded assets. Runs locally at `http://127.0.0.1:8090` for now |
+| **PocketBase** | Open-source backend in a single file (database + auth + file storage + API). JS SDK: `pocketbase` npm package | Saves and loads avatars, handles user accounts, stores uploaded assets. Runs locally at `http://127.0.0.1:8090` for now |
 
 **How they fit together:** UI controls (Tailwind) → update the store (Zustand) → the 3D scene (Three.js) reads the store and re-renders → Save/Load goes through PocketBase.
 
@@ -39,6 +39,7 @@
 | 7 | First 3D scene: a box with orbit controls | ✅ Done | 11 Nov 2026 | `df30803` |
 | 8 | Set up PocketBase locally (skipped paid hosting) | ✅ Done | 11 Nov 2026 | – (lives outside the repo) |
 | 9 | Created PocketBase collections for customization | ✅ Done | 11 Nov 2026 | – (data lives in `pb_data`) |
+| 10 | Zustand store + UI menu loading categories from PocketBase | ✅ Done | 11 Nov 2026 | _(this push)_ |
 
 <!-- Status key: ✅ Done · 🔄 In progress · ⏸️ Stuck · ⬜ Not started -->
 
@@ -520,6 +521,100 @@ _(none)_
 - **Default file size limit is 5 MB.** 3D models (`.glb`) can be bigger, so if an upload to `url` fails, raise **Max file size** in the field's options.
 - **API rules:** new collections are admin-only by default. Before the React app can read them, the **List/View rules** need to be opened up (e.g. set to empty = public) in each collection's API Rules tab.
 - The `users` collection is an *auth* collection, built in for sign-up and login.
+
+---
+
+### Step 10: Zustand store + UI menu loading categories from PocketBase
+**Date:** 11 Nov 2026
+**Commit:** _(this push)_
+
+**What I did**
+- Installed Zustand (state management) and the PocketBase JavaScript SDK:
+  ```
+  npm install zustand pocketbase
+  ```
+- Created `.env.local` with the PocketBase address (git-ignored by the `*.local` rule, so it never goes to GitHub):
+  ```
+  VITE_POCKETBASE_URL=http://127.0.0.1:8090
+  ```
+- Created `src/store.js`: a Zustand store that fetches the groups and assets from PocketBase and remembers which category is selected.
+- Created `src/components/UI.jsx`: an overlay on top of the 3D canvas with a **Download** button (top right) and a menu box (bottom) showing the category tabs and the thumbnails for the selected category.
+- Added `<UI />` to `App.jsx` above the `<Canvas>`.
+- Deleted the unused `public/favicon.svg` and `public/icons.svg`, and removed the favicon link from `index.html`.
+
+**Why**
+- **Zustand** gives one shared place (the *store*) for data that several components need, like the category list and which tab is selected, without passing props down through every component.
+- **The PocketBase SDK** is a ready-made client, so `pb.collection('X').getFullList()` replaces writing `fetch()` calls by hand.
+- **`.env.local`** keeps settings like the server address out of the code, so it can point to a different server later (e.g. a hosted PocketBase) without editing any files.
+
+**Key commands / code**
+`src/store.js`:
+```js
+import { create } from 'zustand'
+import PocketBase from 'pocketbase';
+
+const pocketBaseUrl = import.meta.env.VITE_POCKETBASE_URL;
+if (!pocketBaseUrl) {
+    throw new Error('VITE_POCKETBASE_URL is not defined in the environment variables.');
+}
+export const pb = new PocketBase(pocketBaseUrl);
+pb.autoCancellation(false);
+
+export const useConfiguratorStore = create((set) => ({
+    categories: [],
+    currentCategory: null,
+    assets: [],
+    fetchCategories: async () => {
+        try {
+            const categories = await pb.collection('CustomizationGroups').getFullList({ sort: '+position' });
+            const assets = await pb.collection('CustomizationAssets').getFullList({ sort: '-created' });
+            categories.forEach(category => {
+                category.assets = assets.filter((asset) => asset.group === category.id);
+            });
+            set({ categories, currentCategory: categories[0], assets });
+        } catch (error) {
+            console.error('Error fetching categories:', error);
+        }
+    },
+    setCurrentCategory: (category) => set({ currentCategory: category }),
+}))
+```
+How it flows:
+1. `AssetsBox` mounts → `useEffect` calls `fetchCategories()`.
+2. The store loads all groups (sorted by `position`) and all assets, then attaches each group's assets to it (`category.assets`).
+3. `set(...)` saves them in the store, and every component reading the store re-renders.
+4. Clicking a tab → `setCurrentCategory(category)` → that tab turns indigo and its thumbnails show.
+5. Thumbnail image URL: `pb.files.getURL(asset, asset.thumbnail)`.
+
+`src/components/UI.jsx` layout:
+```
+<main>  fixed, covers the screen, pointer-events-none (clicks pass through to the 3D canvas)
+ ├─ top row:    [ empty <a> placeholder ]            [ Download button ]
+ └─ bottom:     AssetsBox
+                 ├─ category tabs  (Head, Hair, ... Accessories)
+                 └─ thumbnails for the selected category
+```
+
+**Problems & fixes**
+1. **`Failed to resolve import "../store/configuratorStore"`**. **Cause:** the import path didn't match the real file (`src/store.js`). **Fix:** changed the import to `"../store"`. *Lesson: `../` means "go up one folder", and the path must match the actual file location and name.*
+2. **`pocketbase` package missing.** The store imported it, but it was never installed. **Fix:** `npm install pocketbase`.
+3. **Selected tab never highlighted.** **Cause:** `setCurrentCategory(category.id)` stored just the id (a string), but the highlight checked `currentCategory.name`. **Fix:** pass the whole object: `setCurrentCategory(category)`.
+4. **"The request was autocancelled" error in dev.** **Cause:** React `<StrictMode>` runs effects twice in development, and the PocketBase SDK cancels a duplicate identical request. **Fix:** `pb.autoCancellation(false)`.
+5. **Errors were silent.** **Fix:** wrapped the fetch in `try/catch` with a clear `console.error`.
+6. **Two PocketBase clients** (one in `UI.jsx`, one in `store.js`). **Fix:** `export const pb` from the store and import it in `UI.jsx`.
+7. **`max-w-screen-xl` did nothing.** That class doesn't exist in Tailwind v4. **Fix:** `max-w-7xl` (same 1280px).
+8. **Thumbnails not fitting their boxes.** **Fix:** `className="w-full h-full object-cover"` + `alt` text on the `<img>`.
+9. **`pb.files.getUrl` deprecated** (console warning). **Fix:** `pb.files.getURL` (capital URL).
+10. **Small cleanups:** `key={asset.id}` instead of the array index, removed invalid Tailwind classes (`transition-opacity-100`), added `fetchCategories` to the `useEffect` dependency array, removed the dead favicon link.
+
+**Notes / things I learned**
+- **Vite env variables** must start with `VITE_` to be available in browser code, and they're read with `import.meta.env.VITE_...`. After creating or changing `.env.local`, **restart** `npm run dev`.
+- **`.env.local` is not on GitHub.** On a new computer I have to create it again.
+- **`pointer-events-none` on the overlay + `pointer-events-auto` on buttons** = the menu is clickable, but dragging anywhere else still rotates the 3D view.
+- **React keys** should be stable, unique ids (`asset.id`), not the array index, so React can track items correctly when the list changes.
+- **StrictMode double-running effects** only happens in development. It's React deliberately checking for bugs, and doesn't happen in the production build.
+- Calling `useConfiguratorStore()` with no selector re-renders on *any* store change. That's fine for now; later I can select just what's needed: `useConfiguratorStore((s) => s.categories)`.
+- Both PocketBase (`pocketbase.exe serve`) **and** the dev server (`npm run dev`) must be running, or the menu stays empty.
 
 ---
 
