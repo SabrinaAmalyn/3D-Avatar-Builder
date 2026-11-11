@@ -38,6 +38,7 @@
 | 6 | Installed Three.js, React Three Fiber & Drei | ✅ Done | 11 Nov 2026 | `94224c4` |
 | 7 | First 3D scene: a box with orbit controls | ✅ Done | 11 Nov 2026 | `df30803` |
 | 8 | Set up PocketBase locally (skipped paid hosting) | ✅ Done | 11 Nov 2026 | – (lives outside the repo) |
+| 9 | Created PocketBase collections for customization | ✅ Done | 11 Nov 2026 | – (data lives in `pb_data`) |
 
 <!-- Status key: ✅ Done · 🔄 In progress · ⏸️ Stuck · ⬜ Not started -->
 
@@ -446,6 +447,79 @@ Other notes:
 - `pb_data/` **is** the database. Don't delete it, and back it up by copying the folder (with PocketBase stopped).
 - `127.0.0.1` = "this computer" (same as `localhost`). Nobody else can reach it.
 - **Later, to put it online:** managed PocketBase hosts (PocketBase Cloud, PocketHost) or a cheap VPS (~$5–10/month). Free tiers change often, so check current pricing first.
+
+---
+
+### Step 9: Created PocketBase collections for customization
+**Date:** 11 Nov 2026
+**Commit:** – (collections and records live in `pocketbase/pb_data`, not in the repo)
+
+**What I did**
+In the PocketBase admin dashboard (http://127.0.0.1:8090/_/), created two new collections next to the built-in `users` collection:
+
+**1. `CustomizationGroups`**: the categories shown in the builder
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | auto | Every collection has it |
+| `name` | text | e.g. "Hair" |
+| `position` | number | Display order in the UI |
+| `created` / `updated` | autodate | Every collection has them |
+
+13 records:
+
+| position | name | | position | name |
+|---|---|---|---|---|
+| 1 | Head | | 8 | Glasses |
+| 2 | Hair | | 9 | Hat |
+| 3 | Face | | 10 | Top |
+| 4 | Eyes | | 11 | Bottom |
+| 5 | Eyebrows | | 12 | Shoe |
+| 6 | Nose | | 13 | Accessories |
+| 7 | Facial Hair | | | |
+
+**2. `CustomizationAssets`**: the individual items you can pick in each category
+
+| Field | Type | Notes |
+|---|---|---|
+| `id` | auto | |
+| `group` | relation → `CustomizationGroups` (single) | Which category the item belongs to |
+| `name` | text | e.g. "Top_01" |
+| `thumbnail` | file | Small preview image shown in the picker |
+| `url` | file | The 3D model file for the item (empty for now) |
+| `created` / `updated` | autodate | |
+
+3 records so far: `Top_01`, `Top_02`, `Top_03`, all with `group` = **Top**, each with a thumbnail image, and `url` empty for now.
+
+**Why**
+- Keeping the options in the database (not hard-coded in React) means I can add new hats, tops etc. from the dashboard without changing any code. The app just loads whatever is there.
+- `position` lets me control the order of categories in the UI instead of relying on alphabetical or creation order.
+- The **relation** links each asset to its group, so the app can ask "give me all assets where group = Top".
+
+**Key commands / code**
+_(done in the dashboard, no code yet)_
+
+How the React app will fetch this later (using the PocketBase JS SDK):
+```js
+import PocketBase from 'pocketbase'
+const pb = new PocketBase('http://127.0.0.1:8090')
+
+// all groups in display order, each with its assets attached
+const groups = await pb.collection('CustomizationGroups').getFullList({ sort: '+position' })
+const assets = await pb.collection('CustomizationAssets').getFullList({ expand: 'group' })
+```
+
+**Problems & fixes**
+_(none)_
+
+**Notes / things I learned**
+- **Collection** = a table. **Record** = a row. **Field** = a column.
+- **Relation field** = stores another record's `id` (here, the group's id) instead of copying its data. `expand: 'group'` in a query pulls in the full linked record.
+- **File fields** store just the *filename* in the database (e.g. `top_jb88u2ivdn.jpg`). PocketBase adds a random suffix to avoid clashes. The actual file is saved in `pb_data/storage/`, and the URL to load it is built like:
+  `http://127.0.0.1:8090/api/files/<collection>/<recordId>/<filename>` (or `pb.files.getURL(record, record.thumbnail)` with the SDK).
+- **Default file size limit is 5 MB.** 3D models (`.glb`) can be bigger, so if an upload to `url` fails, raise **Max file size** in the field's options.
+- **API rules:** new collections are admin-only by default. Before the React app can read them, the **List/View rules** need to be opened up (e.g. set to empty = public) in each collection's API Rules tab.
+- The `users` collection is an *auth* collection, built in for sign-up and login.
 
 ---
 
