@@ -7,12 +7,31 @@
 
 ---
 
+## Tech stack
+
+| Tool | What it is | Role in this project |
+|------|------------|----------------------|
+| **Three.js** | JavaScript 3D library (WebGL) | Renders the 3D avatar in the browser: scene, camera, lights, models, materials |
+| **Tailwind CSS** | Utility-first CSS framework | Styles the builder UI (panels, buttons, colour pickers, sliders) with classes directly in the markup |
+| **Zustand** | Small state-management library | Holds the avatar's current settings (body, hair, outfit, colours) in one store, so the UI and the 3D scene stay in sync |
+| **Vite** | Build tool + dev server | Runs the app locally with instant reload (`npm run dev`) and bundles it for production |
+| **React** | UI library (came with the Vite React template) | Builds the interface out of components; Zustand plugs into it |
+| **ESLint** | Linter (came with the Vite template) | Flags mistakes in the code as I type. Chose ESLint over Oxlint because it matches tutorials, has more React plugins and help online, and speed doesn't matter at this project size |
+| **PocketBase** | Open-source backend in a single file (database + auth + file storage + API) | Saves and loads avatars, handles user accounts, stores uploaded assets |
+
+**How they fit together:** UI controls (Tailwind) → update the store (Zustand) → the 3D scene (Three.js) reads the store and re-renders → Save/Load goes through PocketBase.
+
+---
+
 ## Progress at a glance
 
 | # | Step | Status | Date | Commit |
 |---|------|--------|------|--------|
 | 0 | Project folder & learning log created | ✅ Done | 11 Nov 2026 | `544c2c8` |
 | 1 | Connected project to GitHub | ✅ Done | 11 Nov 2026 | `544c2c8` |
+| 2 | Scaffolded project with Vite (React + npm) | ✅ Done | 11 Nov 2026 | `527f9c8` |
+| 3 | Installed Tailwind CSS as a Vite plugin | ✅ Done | 11 Nov 2026 | `527f9c8` |
+| 4 | Cleaned out template styling & assets | ✅ Done | 11 Nov 2026 | `527f9c8` |
 
 <!-- Status key: ✅ Done · 🔄 In progress · ⏸️ Stuck · ⬜ Not started -->
 
@@ -81,7 +100,138 @@ git push
 - `git add` → stage changes, `git commit` → save a snapshot locally, `git push` → upload to GitHub.
 - `-u origin main` on the first push sets the default, so later pushes need only `git push`.
 - Error 403 means "you're logged in, but this account isn't allowed here." It's a wrong-account problem, not a wrong-password problem.
+- `git add .` only adds changes in the **current folder and below**. Running it inside `3d-avatar-builder/` skipped `LEARNING_LOG.md` in the repo root. Use `git add -A` (adds everything in the repo from anywhere), or run `git add .` from the repo root.
 - Use `git config user.email` to check which email commits are labelled with.
+
+---
+
+### Step 2: Scaffolded project with Vite (React + npm)
+**Date:** 11 Nov 2026
+**Commit:** `527f9c8` – "Steps 2-4: Vite + React, Tailwind, clean slate"
+
+**What I did**
+- Created a new Vite project using npm, with the React (JavaScript) template.
+- The app lives in the subfolder `3d-avatar-builder/` inside the repo.
+- Installed dependencies with npm.
+
+**Why**
+- Vite provides a fast dev server with instant reload and a production build step, so I don't have to configure a bundler myself.
+- The React template gives a working starter app plus ESLint already set up.
+
+**Key commands / code**
+```
+npm create vite@latest      # chose: name 3d-avatar-builder → React → JavaScript
+cd 3d-avatar-builder
+npm install
+npm run dev                 # start the dev server (usually http://localhost:5173)
+```
+What the template created:
+- `index.html`: the page the app loads into
+- `src/main.jsx`: entry point that mounts React
+- `src/App.jsx` / `src/App.css`: the starter component (counter demo)
+- `src/index.css`: global styles
+- `vite.config.js`: Vite settings and plugins
+- `eslint.config.js`: lint rules (ESLint 10 + React hooks plugins)
+- `.gitignore`: already ignores `node_modules`
+
+Versions installed: Vite 8.3, React 19.3, ESLint 10.14.
+
+**Problems & fixes**
+_(none)_
+
+**Notes / things I learned**
+- `npm run lint` runs ESLint over the project.
+- `node_modules/` is never committed; anyone can recreate it from `package.json` + `package-lock.json` with `npm install`.
+- Because the app is in a subfolder, run npm commands from `C:\3D Avatar Builder\3d-avatar-builder`, not the repo root.
+
+---
+
+### Step 3: Installed Tailwind CSS as a Vite plugin
+**Date:** 11 Nov 2026
+**Commit:** `527f9c8` – "Steps 2-4: Vite + React, Tailwind, clean slate"
+
+**What I did**
+- Installed Tailwind CSS and its official Vite plugin with npm.
+- Added the plugin to `vite.config.js`.
+- Imported Tailwind at the top of `src/index.css`.
+
+**Why**
+- Tailwind v4 integrates directly with Vite through `@tailwindcss/vite`, with no `tailwind.config.js` or PostCSS setup needed.
+- The `@import` pulls Tailwind's styles in, so I can use utility classes (`flex`, `p-4`, `bg-slate-800`, ...) in any component.
+
+**Key commands / code**
+```
+npm install tailwindcss @tailwindcss/vite
+```
+`vite.config.js`:
+```js
+import react from '@vitejs/plugin-react'
+import { defineConfig } from 'vite'
+import tailwindcss from '@tailwindcss/vite'
+
+export default defineConfig({
+  plugins: [react(), tailwindcss()],
+})
+```
+`src/index.css` (first line):
+```css
+@import "tailwindcss";
+```
+
+Version installed: Tailwind CSS 4.3.
+
+**Problems & fixes**
+_(none)_
+
+**Notes / things I learned**
+- Tailwind v4 needs only the plugin + one CSS import. Older tutorials (v3) use `tailwind.config.js`, `npx tailwindcss init` and `@tailwind base/components/utilities`, which isn't needed anymore.
+- To test it, add a class like `className="text-3xl font-bold underline"` to something in `App.jsx` and check that it changes in the browser.
+- The template's own CSS could clash with Tailwind styles, so I removed it in Step 4.
+
+---
+
+### Step 4: Cleaned out template styling & assets
+**Date:** 11 Nov 2026
+**Commit:** `527f9c8` – "Steps 2-4: Vite + React, Tailwind, clean slate"
+
+**What I did**
+- Deleted the template images in `src/assets/` (`hero.png`, `react.svg`, `vite.svg`), and with them the `assets` folder.
+- Deleted `src/App.css` and its import from `App.jsx`.
+- Stripped `src/index.css` down to the single line `@import "tailwindcss";` (removed the template's `:root` colour variables and other styles).
+- Replaced the counter demo in `App.jsx` with a simple Tailwind test heading.
+
+**Why**
+- To start from a blank slate, so the only styling comes from Tailwind and nothing from the template interferes with it.
+- The starter images and counter demo aren't part of the avatar builder.
+
+**Key commands / code**
+`src/index.css` (whole file):
+```css
+@import "tailwindcss";
+```
+`src/App.jsx`:
+```jsx
+function App() {
+  return (
+    <>
+      <h1 className="text-3xl font-bold underline">
+        Hello world!
+      </h1>
+    </>
+  )
+}
+
+export default App
+```
+Files left in `src/`: `main.jsx`, `App.jsx`, `index.css`.
+
+**Problems & fixes**
+- Used `class=` instead of `className=` on the `<h1>`. In JSX it has to be `className`, because `class` is a reserved word in JavaScript. React may still apply it but logs a warning in the browser console.
+
+**Notes / things I learned**
+- `main.jsx` imports `index.css`, so Tailwind loads globally for every component.
+- `public/` (favicon.svg, icons.svg) is separate from `src/assets/`. Files in `public/` are served as-is at the site root (e.g. `/favicon.svg`), so the favicon still works.
+- Tailwind's base styles ("Preflight") reset default browser styling. That's why plain `<h1>` text looks unstyled unless I add classes like `text-3xl`.
 
 ---
 
