@@ -12,6 +12,8 @@
 | Tool | What it is | Role in this project |
 |------|------------|----------------------|
 | **Three.js** | JavaScript 3D library (WebGL) | Renders the 3D avatar in the browser: scene, camera, lights, models, materials |
+| **React Three Fiber** (`@react-three/fiber`) | React renderer for Three.js | Lets me write the 3D scene as React components (`<Canvas>`, `<mesh>`, ...) instead of plain Three.js code |
+| **Drei** (`@react-three/drei`) | Helper library for React Three Fiber | Ready-made pieces: camera controls, model loading, lighting environments, etc. |
 | **Tailwind CSS** | Utility-first CSS framework | Styles the builder UI (panels, buttons, colour pickers, sliders) with classes directly in the markup |
 | **Zustand** | Small state-management library | Holds the avatar's current settings (body, hair, outfit, colours) in one store, so the UI and the 3D scene stay in sync |
 | **Vite** | Build tool + dev server | Runs the app locally with instant reload (`npm run dev`) and bundles it for production |
@@ -33,6 +35,7 @@
 | 3 | Installed Tailwind CSS as a Vite plugin | ✅ Done | 11 Nov 2026 | `527f9c8` |
 | 4 | Cleaned out template styling & assets | ✅ Done | 11 Nov 2026 | `527f9c8` |
 | 5 | Made `3d-avatar-builder` the repo root | ✅ Done | 11 Nov 2026 | `922ba96` |
+| 6 | Installed Three.js, React Three Fiber & Drei | ✅ Done | 11 Nov 2026 | _(not committed yet)_ |
 
 <!-- Status key: ✅ Done · 🔄 In progress · ⏸️ Stuck · ⬜ Not started -->
 
@@ -268,6 +271,55 @@ git push
 - Git notices when files have been moved and records them as **renames**, so the history of every file is kept (`git log --follow <file>` shows it across the move).
 - `-Force` is needed in PowerShell because `.git` is a hidden folder.
 - From now on, open `C:\3D Avatar Builder\3d-avatar-builder` in VS Code and run all git + npm commands there.
+
+---
+
+### Step 6: Installed Three.js, React Three Fiber & Drei
+**Date:** 11 Nov 2026
+**Commit:** _(not committed yet)_
+
+**What I did**
+- Installed the 3D libraries with npm:
+  - `three`: the Three.js core 3D engine
+  - `@types/three`: type definitions for Three.js
+  - `@react-three/fiber`: lets React drive Three.js
+  - `@react-three/drei`: helper components for React Three Fiber
+
+**Why**
+- Three.js on its own is written imperatively (create scene, camera, renderer, add objects, run an animation loop by hand). React Three Fiber (R3F) lets me describe the same scene as React components, so it works naturally with React state and Zustand.
+- Drei saves writing common pieces by hand, e.g. `<OrbitControls />` to rotate around the avatar and `useGLTF` to load 3D models.
+- `@types/three` gives VS Code autocomplete and hover docs for Three.js, even in a JavaScript project.
+
+**Key commands / code**
+```
+npm install three @types/three @react-three/fiber
+npm install @react-three/drei
+```
+Versions installed: three 0.187, @react-three/fiber 9.8, @react-three/drei 10.7.
+
+Rough idea of what R3F code looks like (to come in later steps):
+```jsx
+import { Canvas } from '@react-three/fiber'
+import { OrbitControls } from '@react-three/drei'
+
+<Canvas>
+  <ambientLight />
+  <mesh>
+    <boxGeometry />
+    <meshStandardMaterial color="hotpink" />
+  </mesh>
+  <OrbitControls />
+</Canvas>
+```
+
+**Problems & fixes**
+_(none)_
+
+**Notes / things I learned**
+- Three.js version numbers are `0.x` (e.g. 0.187) on purpose. It has never had a "1.0", and each minor version can include breaking changes, so tutorials from much older versions might not match exactly.
+- R3F v9 is the version made for React 19. The version has to match the React version.
+- `@types/*` packages are only used by the editor and type-checker, so they're often installed as dev dependencies (`npm install -D @types/three`). Having it under `dependencies` works fine too.
+- Every `<mesh>` = geometry (the shape) + material (the surface look).
 
 ---
 
