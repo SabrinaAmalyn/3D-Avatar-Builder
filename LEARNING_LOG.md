@@ -35,7 +35,8 @@
 | 3 | Installed Tailwind CSS as a Vite plugin | ✅ Done | 11 Nov 2026 | `527f9c8` |
 | 4 | Cleaned out template styling & assets | ✅ Done | 11 Nov 2026 | `527f9c8` |
 | 5 | Made `3d-avatar-builder` the repo root | ✅ Done | 11 Nov 2026 | `922ba96` |
-| 6 | Installed Three.js, React Three Fiber & Drei | ✅ Done | 11 Nov 2026 | _(not committed yet)_ |
+| 6 | Installed Three.js, React Three Fiber & Drei | ✅ Done | 11 Nov 2026 | `94224c4` |
+| 7 | First 3D scene: a box with orbit controls | ✅ Done | 11 Nov 2026 | _(not committed yet)_ |
 
 <!-- Status key: ✅ Done · 🔄 In progress · ⏸️ Stuck · ⬜ Not started -->
 
@@ -276,7 +277,7 @@ git push
 
 ### Step 6: Installed Three.js, React Three Fiber & Drei
 **Date:** 11 Nov 2026
-**Commit:** _(not committed yet)_
+**Commit:** `94224c4` – "Step 6: Three.js, R3F, Drei"
 
 **What I did**
 - Installed the 3D libraries with npm:
@@ -320,6 +321,73 @@ _(none)_
 - R3F v9 is the version made for React 19. The version has to match the React version.
 - `@types/*` packages are only used by the editor and type-checker, so they're often installed as dev dependencies (`npm install -D @types/three`). Having it under `dependencies` works fine too.
 - Every `<mesh>` = geometry (the shape) + material (the surface look).
+
+---
+
+### Step 7: First 3D scene: a box with orbit controls
+**Date:** 11 Nov 2026
+**Commit:** _(not committed yet)_
+
+**What I did**
+- Made `#root` fill the whole window so the 3D canvas has room to draw.
+- Added a React Three Fiber `<Canvas>` to `App.jsx` with a camera, dark grey background, orbit controls and a small box.
+- Ended up using `meshNormalMaterial` (like the tutorial), so each side of the box is a different colour and no lights are needed.
+
+**Why**
+- This is the "hello world" of 3D: it proves Three.js, R3F and Drei are wired up before building the actual avatar.
+
+**Key commands / code**
+`src/index.css`:
+```css
+@import "tailwindcss";
+
+#root {
+    width: 100vw;
+    height: 100vh;
+}
+
+body {
+    margin: 0;
+}
+```
+`src/App.jsx`:
+```jsx
+import { Canvas } from '@react-three/fiber'
+import { OrbitControls } from '@react-three/drei'
+
+function App() {
+  return (
+    <>
+      <Canvas camera={{ position: [3, 3, 3] }}>
+        <color attach="background" args={['#333333']} />
+        <OrbitControls />
+        <mesh>
+          <boxGeometry args={[0.5, 0.5, 0.5]} />
+          <meshNormalMaterial />
+        </mesh>
+      </Canvas>
+    </>
+  )
+}
+
+export default App
+```
+What each piece does:
+- `<Canvas camera={{ position: [3, 3, 3] }}>`: the 3D viewport. The camera sits at x=3, y=3, z=3 and looks at the centre (0, 0, 0).
+- `<color attach="background" args={['#333333']} />`: sets the scene's background colour.
+- `<OrbitControls />` (Drei): drag to rotate, scroll to zoom, right-drag to pan.
+- `<mesh>`: a visible object = geometry (`boxGeometry`, 0.5 × 0.5 × 0.5) + material (`meshNormalMaterial`, unlit).
+
+**Problems & fixes**
+1. **Blank page.** **Cause:** forgot to import `Canvas` and `OrbitControls`, so React crashed with `Canvas is not defined`. **Fix:** added the two `import` lines. *Lesson: if the page is blank, check the browser console (F12 → Console) first.*
+2. **Box was black / invisible.** **Cause:** `meshStandardMaterial` is a *lit* material, and the scene had no lights. **Fix:** added `<ambientLight intensity={0.5} />` + `<directionalLight position={[3, 5, 2]} intensity={1} />`, which worked (later swapped to an unlit material, see #3).
+3. **The tutorial shows a box with a different colour on each side and no lights.** **Reason:** the tutorial uses `<meshNormalMaterial />`, not `meshStandardMaterial`. **Fix:** switched to `meshNormalMaterial` and removed the lights. (See notes below.)
+
+**Notes / things I learned**
+- Materials are either **lit** (`meshStandardMaterial`, `meshPhysicalMaterial`, `meshLambertMaterial`: they need lights and are black without them) or **unlit** (`meshBasicMaterial`, `meshNormalMaterial`: they show up with no lights).
+- `meshNormalMaterial` colours each surface by the direction it faces (its *normal*): facing x → reddish, facing y → greenish, facing z → bluish. That's why each side of the cube is a different colour. It's a debugging/demo material, handy for checking a shape is there and the right way round.
+- `ambientLight` = even light everywhere, no shadows or shading. `directionalLight` = sunlight from one direction, which gives faces different brightness so the shape reads as 3D.
+- The canvas fills its parent element, so the parent (`#root`) needs a real height, or the canvas will be 0px tall.
 
 ---
 
